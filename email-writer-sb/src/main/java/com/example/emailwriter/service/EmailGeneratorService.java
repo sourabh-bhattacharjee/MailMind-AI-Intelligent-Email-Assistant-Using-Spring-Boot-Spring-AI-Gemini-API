@@ -3,8 +3,7 @@ package com.example.emailwriter.service;
 import com.example.emailwriter.dto.EmailRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Value;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -13,16 +12,14 @@ import java.util.Map;
 @Service
 public class EmailGeneratorService {
 
-    private final WebClient webClient;
+
 
     @Value("${gemini.api.url}")
     private String geminiApiUrl;
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    public EmailGeneratorService(WebClient webClient) {
-        this.webClient = webClient;
-    }
+    private final WebClient webClient = WebClient.builder().build();
 
 
     public String generateEmailReply(EmailRequest emailRequest){
@@ -42,10 +39,12 @@ public class EmailGeneratorService {
         String response = webClient.post()
                 .uri(geminiApiUrl + geminiApiKey)
                 .header("Content-type", "application/json")
+                .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
 
+        System.out.println("response"+ response);
         // Extract extractResponseContent abd return
         
         return extractResponseContent(response);
@@ -56,9 +55,11 @@ public class EmailGeneratorService {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(response);
-            return jsonNode.path("candidates").get(0)
-                    .path("contents").get(0)
-                    .path("")
+            System.out.println("jsonNode"+ jsonNode);
+            return jsonNode.path("candidates").path(0)
+                    .path("content")
+                    .path("parts").path(0)
+                    .path("text").asText();
         } catch (Exception e) {
             return "Error processing response" + e.getMessage();
         }
